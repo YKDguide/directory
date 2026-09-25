@@ -472,7 +472,7 @@ def build_site():
                                 
                                 const tocHeader = document.createElement('div');
                                 tocHeader.className = 'toc-inline-header';
-                                tocHeader.textContent = 'Table of Contents (Click to Jump)';
+                                tocHeader.textContent = 'Table of Contents';
                                 currentTocContainer.appendChild(tocHeader);
                                 
                                 currentTocGrid = document.createElement('div');
