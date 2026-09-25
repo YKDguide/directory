@@ -1,6 +1,5 @@
 import json
 import os
-import html
 
 def build_site():
     with open('_site_data/regional_directory.json', 'r', encoding='utf-8') as f:
@@ -9,7 +8,6 @@ def build_site():
     with open('_site_data/housing_guide.json', 'r', encoding='utf-8') as f:
         guide_data = json.load(f)
         
-    # Serialize JSON for embedded client-side search and rendering
     dir_json_str = json.dumps(dir_data, ensure_ascii=False)
     guide_json_str = json.dumps(guide_data, ensure_ascii=False)
     
@@ -18,7 +16,7 @@ def build_site():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yukon-Kuskokwim Delta Regional Directory & Housing Resources Guide</title>
+    <title>Yukon-Kuskokwim Delta Housing Resources & Regional Directory</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -43,6 +41,10 @@ def build_site():
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }}
+
+        html {{
+            scroll-behavior: smooth;
         }}
 
         body {{
@@ -85,12 +87,6 @@ def build_site():
             font-weight: 700;
             letter-spacing: -0.02em;
             color: #ffffff;
-        }}
-
-        .brand-subtitle {{
-            font-size: 0.875rem;
-            color: #94a3b8;
-            font-weight: 400;
         }}
 
         .nav-tabs {{
@@ -235,6 +231,54 @@ def build_site():
             min-height: 800px;
         }}
 
+        /* Inline Table of Contents Grid */
+        .toc-inline-container {{
+            margin: 1.5rem 0 2rem 0;
+            padding: 1.25rem;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius);
+        }}
+
+        .toc-inline-header {{
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }}
+
+        .toc-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.6rem;
+        }}
+
+        .toc-link-btn {{
+            display: block;
+            padding: 0.5rem 0.75rem;
+            background: #ffffff;
+            color: #0284c7;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.15s ease-in-out;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+
+        .toc-link-btn:hover {{
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #0284c7;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }}
+
         /* Section & Paragraph Styling */
         .doc-heading1 {{
             font-size: 1.75rem;
@@ -242,7 +286,7 @@ def build_site():
             color: var(--primary);
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 0.5rem;
-            margin-top: 2rem;
+            margin-top: 2.5rem;
             margin-bottom: 1rem;
             scroll-margin-top: 170px;
         }}
@@ -251,17 +295,11 @@ def build_site():
             font-size: 1.35rem;
             font-weight: 600;
             color: var(--heading-color);
-            margin-top: 1.75rem;
+            margin-top: 2rem;
             margin-bottom: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border-color);
             scroll-margin-top: 170px;
-        }}
-
-        .doc-heading3 {{
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-top: 1.25rem;
-            margin-bottom: 0.5rem;
         }}
 
         .doc-paragraph {{
@@ -308,10 +346,6 @@ def build_site():
             color: #854d0e;
             padding: 0.1em 0.2em;
             border-radius: 2px;
-        }}
-
-        .hidden {{
-            display: none !important;
         }}
 
         /* Footer */
@@ -393,8 +427,19 @@ def build_site():
             root.innerHTML = '';
             tocList.innerHTML = '';
             
+            // Collect all heading slugs
+            const headingSlugs = new Set();
+            data.forEach(item => {{
+                if (item.type === 'paragraph' && (item.style === 'Heading1' || item.style === 'Heading2' || item.style === 'Title')) {{
+                    const s = slugify(item.text);
+                    if (s) headingSlugs.add(s);
+                }}
+            }});
+            
             let matchCount = 0;
             let totalBlocks = 0;
+            let currentTocContainer = null;
+            let currentTocGrid = null;
             
             data.forEach((item, index) => {{
                 totalBlocks++;
@@ -417,6 +462,40 @@ def build_site():
                     if (item.type === 'paragraph') {{
                         const isHeading2 = item.style === 'Heading2';
                         const isHeading1 = item.style === 'Heading1' || item.style === 'Title';
+                        const itemSlug = slugify(item.text);
+                        const isTocItem = !isHeading1 && !isHeading2 && itemSlug && headingSlugs.has(itemSlug) && item.text.length < 80;
+
+                        if (isTocItem) {{
+                            if (!currentTocContainer) {{
+                                currentTocContainer = document.createElement('div');
+                                currentTocContainer.className = 'toc-inline-container';
+                                
+                                const tocHeader = document.createElement('div');
+                                tocHeader.className = 'toc-inline-header';
+                                tocHeader.textContent = 'Table of Contents (Click to Jump)';
+                                currentTocContainer.appendChild(tocHeader);
+                                
+                                currentTocGrid = document.createElement('div');
+                                currentTocGrid.className = 'toc-grid';
+                                currentTocContainer.appendChild(currentTocGrid);
+                                
+                                root.appendChild(currentTocContainer);
+                            }}
+                            
+                            const a = document.createElement('a');
+                            a.href = '#' + itemSlug;
+                            a.className = 'toc-link-btn';
+                            if (searchVal !== '') {{
+                                a.innerHTML = highlightText(item.text, searchVal);
+                            }} else {{
+                                a.textContent = item.text;
+                            }}
+                            currentTocGrid.appendChild(a);
+                            return; // Handled as TOC link item
+                        }} else {{
+                            currentTocContainer = null;
+                            currentTocGrid = null;
+                        }}
                         
                         const pEl = document.createElement(isHeading1 ? 'h1' : (isHeading2 ? 'h2' : 'p'));
                         
@@ -424,11 +503,10 @@ def build_site():
                         else if (isHeading2) pEl.className = 'doc-heading2';
                         else pEl.className = 'doc-paragraph';
 
-                        const elementId = slugify(item.text) || ('block-' + index);
+                        const elementId = itemSlug || ('block-' + index);
                         if (isHeading1 || isHeading2) {{
                             pEl.id = elementId;
                             
-                            // Add TOC entry
                             const li = document.createElement('li');
                             li.className = 'toc-item';
                             li.innerHTML = `<a href="#${{elementId}}">${{escapeHtml(item.text)}}</a>`;
@@ -443,6 +521,9 @@ def build_site():
                         
                         root.appendChild(pEl);
                     }} else if (item.type === 'table') {{
+                        currentTocContainer = null;
+                        currentTocGrid = null;
+                        
                         const wrap = document.createElement('div');
                         wrap.className = 'doc-table-wrapper';
                         
@@ -500,7 +581,6 @@ def build_site():
             return string.replace(/[.*+?^${{}}()|[\\]\\\\]/g, '\\\\$&');
         }}
 
-        // Initial render
         renderContent();
     </script>
 </body>
@@ -514,7 +594,7 @@ def build_site():
     with open('docs/index.html', 'w', encoding='utf-8') as f:
         f.write(html_content)
         
-    print("Site HTML files successfully built: index.html & docs/index.html")
+    print("Site HTML files successfully built with interactive TOC anchors: index.html & docs/index.html")
 
 if __name__ == '__main__':
     build_site()
