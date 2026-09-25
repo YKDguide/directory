@@ -332,7 +332,6 @@ def build_site():
         <div class="header-container">
             <div>
                 <h1 class="brand-title">Yukon-Kuskokwim Delta Housing Resources & Regional Directory</h1>
-                <div class="brand-subtitle">Complete Verbatim Reference System — 2026 Edition</div>
             </div>
             <nav class="nav-tabs">
                 <button class="tab-btn active" id="tab-dir" onclick="switchTab('dir')">Regional Directory</button>
