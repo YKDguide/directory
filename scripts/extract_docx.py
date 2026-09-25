@@ -5,11 +5,28 @@ import os
 
 NS = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 
+def parse_paragraph_node(p_elem):
+    parts = []
+    for elem in p_elem.iter():
+        tag = elem.tag.split('}')[-1]
+        if tag == 't' and elem.text:
+            parts.append(elem.text)
+        elif tag == 'tab':
+            parts.append('\t')
+    full_text = ''.join(parts)
+    
+    # If this paragraph is a TOC entry formatted as "Title\tPageNum"
+    if '\t' in full_text:
+        title, _, pagenum = full_text.rpartition('\t')
+        if pagenum.strip().isdigit():
+            full_text = title.strip()
+            
+    return full_text.strip()
+
 def extract_all_elements(elem, elements_list):
     tag = elem.tag.split('}')[-1]
     if tag == 'p':
-        texts = [t.text for t in elem.findall('.//w:t', NS) if t.text]
-        full_text = ''.join(texts)
+        full_text = parse_paragraph_node(elem)
         if full_text:
             pPr = elem.find('w:pPr', NS)
             pStyle = pPr.find('w:pStyle', NS) if pPr is not None else None
@@ -72,5 +89,5 @@ if __name__ == '__main__':
     with open('_site_data/housing_guide.json', 'w', encoding='utf-8') as f:
         json.dump(data2, f, indent=2, ensure_ascii=False)
         
-    print(f"Extracted {len(data1)} blocks from Regional Directory (Chars: {sum(len(x['text']) if x['type']=='paragraph' else sum(len(c) for r in x['rows'] for c in r) for x in data1)}).")
-    print(f"Extracted {len(data2)} blocks from Housing Resources Guide (Chars: {sum(len(x['text']) if x['type']=='paragraph' else sum(len(c) for r in x['rows'] for c in r) for x in data2)}).")
+    print(f"Extracted {len(data1)} blocks from Regional Directory.")
+    print(f"Extracted {len(data2)} blocks from Housing Resources Guide.")
