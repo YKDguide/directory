@@ -35,11 +35,6 @@ jobs:
           python3 scripts/verify_fidelity.py
           python3 scripts/build_site.py
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
